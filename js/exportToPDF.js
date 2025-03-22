@@ -7,6 +7,17 @@ if (!jsPDF) {
 }
 
 /**
+ * Helper function to strip HTML tags from a string.
+ * @param {string} html - The HTML string.
+ * @returns {string} - The plain text without HTML tags.
+ */
+function stripHtml(html) {
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || "";
+}
+
+/**
  * Exports a recipe's details to a PDF file.
  * @param {Object} recipe - Recipe details containing title, ingredients, and instructions.
  */
@@ -52,8 +63,11 @@ function exportToPDF(recipe) {
   doc.text("Instructions:", 10, yOffset + 10);
   doc.setFontSize(12);
   yOffset += 20;
-  const instructions = recipe.instructions || recipe.description || "No instructions available.";
-  const lines = doc.splitTextToSize(instructions, 180);
+  
+  // Strip HTML tags from instructions if present.
+  const rawInstructions = recipe.instructions || recipe.description || "No instructions available.";
+  const plainInstructions = stripHtml(rawInstructions);
+  const lines = doc.splitTextToSize(plainInstructions, 180);
   doc.text(lines, 10, yOffset);
   doc.save(`${title}.pdf`);
 }
