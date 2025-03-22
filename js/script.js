@@ -1,6 +1,6 @@
 // script.js - Handles search functionality and UI updates
 
-import { fetchAllRecipes, fetchRecipeDetails } from "./fetchRecipes.js";
+import { fetchAllRecipes, fetchRecipeDetails } from "./FetchRecipes.js";
 import { exportToPDF } from "./exportToPDF.js";
 
 const searchInput = document.getElementById("search-input");
