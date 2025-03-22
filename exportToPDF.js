@@ -1,19 +1,12 @@
 // exportToPDF.js - Handles exporting recipe details to PDF using the jsPDF library
-// Make sure to include the jsPDF library in your HTML. For example, add the following script tag in your HTML file:
+// Ensure that the jsPDF library is included in your HTML file via CDN:
 // <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-// Check if jsPDF is available globally (via the CDN script) or try to import it if using modules.
-let jsPDF;
-if (typeof window !== "undefined" && window.jspdf) {
-    jsPDF = window.jspdf.jsPDF;
-} else {
-    try {
-        // If you're using a bundler or module system, ensure jspdf is installed and imported.
-        import { jsPDF as importedJsPDF } from "jspdf";
-        jsPDF = importedJsPDF;
-    } catch (e) {
-        console.error("jsPDF library is not available. Please include the jsPDF library to enable PDF export.");
-    }
+// Retrieve jsPDF from the global window object.
+const jsPDF = (typeof window !== "undefined" && window.jspdf) ? window.jspdf.jsPDF : null;
+
+if (!jsPDF) {
+    console.error("jsPDF library is not loaded. Please include the jsPDF library to enable PDF export.");
 }
 
 /**
@@ -47,7 +40,9 @@ function exportToPDF(recipe) {
     } else {
         ingredients.forEach(ing => {
             // Build the ingredient text. Adjust the text based on available properties.
-            const text = ing.original || (ing.ingredient?.name ? `${ing.ingredient.name} - ${ing.measurement?.quantity || ""} ${ing.measurement?.unit || ""}` : "");
+            const text = ing.original || (ing.ingredient?.name 
+                ? `${ing.ingredient.name} - ${ing.measurement?.quantity || ""} ${ing.measurement?.unit || ""}` 
+                : "");
             doc.text(text, 10, yOffset);
             yOffset += 10;
             // Add a new page if yOffset approaches the bottom of the page.
