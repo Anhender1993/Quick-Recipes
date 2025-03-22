@@ -7,14 +7,12 @@ if (!jsPDF) {
 }
 
 /**
- * Helper function to strip HTML tags from a string.
+ * Removes HTML tags from a string using a regular expression.
  * @param {string} html - The HTML string.
  * @returns {string} - The plain text without HTML tags.
  */
-function stripHtml(html) {
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = html;
-  return tempDiv.textContent || tempDiv.innerText || "";
+function stripHtmlTags(html) {
+  return html.replace(/<[^>]*>/g, "");
 }
 
 /**
@@ -30,6 +28,7 @@ function exportToPDF(recipe) {
   const title = recipe.title || recipe.name || "Recipe";
   doc.setFontSize(20);
   doc.text(title, 10, 20);
+  
   doc.setFontSize(14);
   doc.text("Ingredients:", 10, 30);
   doc.setFontSize(12);
@@ -38,6 +37,7 @@ function exportToPDF(recipe) {
     recipe.extendedIngredients ||
     (recipe.sections && recipe.sections[0] && recipe.sections[0].components) ||
     [];
+    
   if (ingredients.length === 0) {
     doc.text("No ingredients available.", 10, yOffset);
     yOffset += 10;
@@ -59,16 +59,18 @@ function exportToPDF(recipe) {
       }
     });
   }
+  
   doc.setFontSize(14);
   doc.text("Instructions:", 10, yOffset + 10);
   doc.setFontSize(12);
   yOffset += 20;
   
-  // Strip HTML tags from instructions if present.
+  // Remove HTML tags from instructions using regex.
   const rawInstructions = recipe.instructions || recipe.description || "No instructions available.";
-  const plainInstructions = stripHtml(rawInstructions);
+  const plainInstructions = stripHtmlTags(rawInstructions);
   const lines = doc.splitTextToSize(plainInstructions, 180);
   doc.text(lines, 10, yOffset);
+  
   doc.save(`${title}.pdf`);
 }
 
