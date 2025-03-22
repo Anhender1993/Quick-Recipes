@@ -2,6 +2,7 @@
 
 import { fetchAllRecipes, fetchRecipeDetails } from "./FetchRecipes.js";
 import { exportToPDF } from "./exportToPDF.js";
+import { exportToCSV } from "./exportToCSV.js";
 
 const searchInput = document.getElementById("search-input");
 const searchButton = document.getElementById("search-button");
@@ -71,7 +72,7 @@ function renderRecipes(recipes) {
 
 /**
  * Load more recipes from the API and append them.
- * (This function is not used during navigation now because we pre-load all recipes.)
+ * (This function is used for pre-loading only.)
  * @returns {Promise<Array>} - The newly loaded recipes.
  */
 async function loadMoreRecipes() {
@@ -85,7 +86,7 @@ async function loadMoreRecipes() {
 
 /**
  * Render pagination controls with arrow buttons and a Home button.
- * Displays numeric page buttons based on the preloaded recipes, up to a maximum of 5.
+ * Displays numeric page buttons based on the preloaded recipes, up to a maximum of 5 pages.
  */
 function renderPagination() {
   paginationContainer.innerHTML = "";
@@ -103,7 +104,7 @@ function renderPagination() {
   });
   paginationContainer.appendChild(homeButton);
 
-  // Create previous arrow button.
+  // Previous arrow button.
   const prevButton = document.createElement("button");
   prevButton.innerHTML = "&#8592;";
   prevButton.classList.add("arrow-button");
@@ -141,7 +142,7 @@ function renderPagination() {
     paginationContainer.appendChild(pageButton);
   }
 
-  // Create next arrow button.
+  // Next arrow button.
   const nextButton = document.createElement("button");
   nextButton.innerHTML = "&#8594;";
   nextButton.classList.add("arrow-button");
@@ -199,10 +200,12 @@ async function showRecipeDetails(recipe) {
     <h3>Instructions:</h3>
     <p>${details.instructions || details.description || "No instructions available."}</p>
     <button id="export-pdf">Export to PDF</button>
+    <button id="export-csv">Export to CSV</button>
   `;
 
   document.getElementById("close-modal").addEventListener("click", closeModal);
   document.getElementById("export-pdf").addEventListener("click", () => exportToPDF(details));
+  document.getElementById("export-csv").addEventListener("click", () => exportToCSV(details));
 
   openModal();
 }
