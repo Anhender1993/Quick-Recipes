@@ -1,41 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Quick Recipes</title>
-  <!-- Link to external CSS file -->
-  <link rel="stylesheet" href="css/style.css">
-  <!-- Include jsPDF library from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Main CSS (with cache-busting query param) -->
+  <link rel="stylesheet" href="css/style.css?v=3.0" />
+
+  <!-- jsPDF library for PDF export -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    integrity="sha512-..."
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  ></script>
 </head>
 <body>
-  <header>
-    <h1>Quick Recipes</h1>
-  </header>
-  <main>
-    <!-- Search Container -->
-    <div class="search-container">
-      <input type="text" id="search-input" placeholder="Search for recipes, ingredients, or cuisine...">
-      <button id="search-button">Search</button>
+  <!-- HERO SECTION -->
+  <header class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1>Quick Recipes</h1>
+      <p>Search and discover delicious recipes instantly</p>
+      <div class="search-container hero-search">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search for recipes, ingredients, or cuisine..."
+          aria-label="Recipe search"
+        />
+        <button id="search-button" aria-label="Search button">Search</button>
+      </div>
     </div>
+  </header>
 
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="main-content">
     <!-- Container for displaying recipe cards -->
     <div id="results-container" class="results-grid"></div>
-    
+
     <!-- Pagination Controls -->
     <div id="pagination-container" class="pagination"></div>
   </main>
 
-  <!-- Modal for recipe details -->
-  <div id="recipe-modal" class="modal">
+  <!-- MODAL for recipe details -->
+  <div id="recipe-modal" class="modal" aria-hidden="true">
     <div class="modal-content" id="modal-content">
-      <span id="close-modal" class="close">&times;</span>
-      <!-- Recipe details will be injected here -->
+      <!-- Close button and recipe details injected here -->
     </div>
   </div>
 
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; <span id="year"></span> Quick Recipes. All rights reserved.</p>
+  </footer>
+
   <!-- Import our JavaScript modules -->
   <script type="module" src="js/script.js"></script>
+  <script>
+    // Dynamically set the footer year
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
