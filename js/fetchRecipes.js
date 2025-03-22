@@ -6,7 +6,7 @@ const TASTY_API_KEY = "600e0d512fmsh965b7450fb4fdd8p1873e0jsn239c1a809df5"; // T
 /**
  * Fetch recipes from Spoonacular API
  * @param {string} query - Search query (recipe name, ingredient, or cuisine)
- * @returns {Promise<Array>} - List of recipes
+ * @returns {Promise<Array>} - List of recipes with a source property
  */
 async function fetchSpoonacularRecipes(query) {
     const url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=10&apiKey=${SPOONACULAR_API_KEY}`;
@@ -15,7 +15,8 @@ async function fetchSpoonacularRecipes(query) {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Spoonacular API Error: ${response.status}`);
         const data = await response.json();
-        return data.results || [];
+        // Map each recipe and add a source property
+        return (data.results || []).map(recipe => ({ ...recipe, source: "spoonacular" }));
     } catch (error) {
         console.error("Error fetching Spoonacular recipes:", error);
         return [];
@@ -25,7 +26,7 @@ async function fetchSpoonacularRecipes(query) {
 /**
  * Fetch recipes from Tasty API
  * @param {string} query - Search query (recipe name, ingredient, or cuisine)
- * @returns {Promise<Array>} - List of recipes
+ * @returns {Promise<Array>} - List of recipes with a source property
  */
 async function fetchTastyRecipes(query) {
     const url = `https://tasty.p.rapidapi.com/recipes/list?from=0&size=10&q=${query}`;
@@ -42,7 +43,8 @@ async function fetchTastyRecipes(query) {
         const response = await fetch(url, options);
         if (!response.ok) throw new Error(`Tasty API Error: ${response.status}`);
         const data = await response.json();
-        return data.results || [];
+        // Map each recipe and add a source property
+        return (data.results || []).map(recipe => ({ ...recipe, source: "tasty" }));
     } catch (error) {
         console.error("Error fetching Tasty recipes:", error);
         return [];
