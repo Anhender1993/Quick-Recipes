@@ -14,7 +14,8 @@ let currentPage = 1;
 const resultsPerPage = 10;
 let allRecipes = [];
 let currentQuery = "";
-let currentOffset = 0; // Used for API pagination
+let currentOffset = 0; // For API pagination
+const maxPagesToLoad = 5; // Pre-load up to 5 pages (max 50 recipes)
 
 /** Opens the modal by adding the "open" class. */
 function openModal() {
@@ -41,7 +42,7 @@ function renderRecipes(recipes) {
     return;
   }
 
-  // Calculate slice of recipes for current page.
+  // Calculate the slice of recipes for the current page.
   const start = (currentPage - 1) * resultsPerPage;
   const end = start + resultsPerPage;
   const paginatedRecipes = recipes.slice(start, end);
@@ -55,7 +56,7 @@ function renderRecipes(recipes) {
       <button class="more-info-btn">More information</button>
     `;
 
-    // Attach event listener to "More information" button.
+    // Attach event listener to the "More information" button.
     const moreInfoBtn = recipeCard.querySelector(".more-info-btn");
     moreInfoBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -65,29 +66,44 @@ function renderRecipes(recipes) {
     resultsContainer.appendChild(recipeCard);
   });
 
-  renderPagination(allRecipes.length);
+  renderPagination();
 }
 
 /**
  * Load more recipes from the API and append them.
+ * (This function is not used during navigation now because we pre-load all recipes.)
+ * @returns {Promise<Array>} - The newly loaded recipes.
  */
 async function loadMoreRecipes() {
-  // Increase offset by 10.
-  currentOffset += 10;
+  currentOffset += resultsPerPage;
   const newRecipes = await fetchAllRecipes(currentQuery, currentOffset);
-  allRecipes = allRecipes.concat(newRecipes);
+  if (newRecipes.length > 0) {
+    allRecipes = allRecipes.concat(newRecipes);
+  }
+  return newRecipes;
 }
 
 /**
- * Render pagination controls with arrow buttons.
- * @param {number} totalResults - Total number of recipes available.
+ * Render pagination controls with arrow buttons and a Home button.
+ * Displays numeric page buttons based on the preloaded recipes, up to a maximum of 5.
  */
-function renderPagination(totalResults) {
+function renderPagination() {
   paginationContainer.innerHTML = "";
+  
+  // Compute total pages based on preloaded recipes.
+  const computedTotalPages = Math.ceil(allRecipes.length / resultsPerPage);
+  const totalPages = Math.min(computedTotalPages, maxPagesToLoad);
 
-  const totalPages = Math.ceil(totalResults / resultsPerPage);
+  // Create and add the Home button.
+  const homeButton = document.createElement("button");
+  homeButton.innerText = "Home";
+  homeButton.classList.add("home-button");
+  homeButton.addEventListener("click", () => {
+    location.reload();
+  });
+  paginationContainer.appendChild(homeButton);
 
-  // Previous arrow button.
+  // Create previous arrow button.
   const prevButton = document.createElement("button");
   prevButton.innerHTML = "&#8592;";
   prevButton.classList.add("arrow-button");
@@ -100,8 +116,20 @@ function renderPagination(totalResults) {
   });
   paginationContainer.appendChild(prevButton);
 
+  // Determine sliding window for numeric page buttons.
+  let startPage = 1;
+  let endPage = totalPages;
+  if (totalPages > 5) {
+    startPage = Math.max(1, currentPage - 2);
+    endPage = startPage + 4;
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = endPage - 4;
+    }
+  }
+
   // Numeric page buttons.
-  for (let i = 1; i <= totalPages; i++) {
+  for (let i = startPage; i <= endPage; i++) {
     const pageButton = document.createElement("button");
     pageButton.innerText = i;
     pageButton.classList.add("page-button");
@@ -113,17 +141,18 @@ function renderPagination(totalResults) {
     paginationContainer.appendChild(pageButton);
   }
 
-  // Next arrow button.
+  // Create next arrow button.
   const nextButton = document.createElement("button");
   nextButton.innerHTML = "&#8594;";
   nextButton.classList.add("arrow-button");
-  nextButton.addEventListener("click", async () => {
-    // If the next page index exceeds currently loaded recipes, load more.
-    if (currentPage * resultsPerPage >= allRecipes.length) {
-      await loadMoreRecipes();
+  if (currentPage === totalPages) nextButton.disabled = true;
+  nextButton.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderRecipes(allRecipes);
+    } else {
+      alert("No more recipes available.");
     }
-    currentPage++;
-    renderRecipes(allRecipes);
   });
   paginationContainer.appendChild(nextButton);
 }
@@ -174,11 +203,13 @@ async function showRecipeDetails(recipe) {
 
   document.getElementById("close-modal").addEventListener("click", closeModal);
   document.getElementById("export-pdf").addEventListener("click", () => exportToPDF(details));
+
   openModal();
 }
 
 /**
  * Perform search and update UI.
+ * Pre-loads recipes for up to 5 pages (max 50 recipes) upon search.
  */
 async function performSearch() {
   const query = searchInput.value.trim();
@@ -186,7 +217,17 @@ async function performSearch() {
   currentQuery = query;
   currentOffset = 0;
   currentPage = 1;
-  allRecipes = await fetchAllRecipes(query, currentOffset);
+  allRecipes = [];
+  
+  // Pre-load recipes for up to maxPagesToLoad pages concurrently.
+  const promises = [];
+  for (let i = 0; i < maxPagesToLoad; i++) {
+    const offset = i * resultsPerPage;
+    promises.push(fetchAllRecipes(query, offset));
+  }
+  const results = await Promise.all(promises);
+  allRecipes = results.flat();
+  console.log("Preloaded recipes:", allRecipes);
   renderRecipes(allRecipes);
 }
 
@@ -196,10 +237,14 @@ searchInput.addEventListener("keypress", (event) => {
   if (event.key === "Enter") performSearch();
 });
 window.addEventListener("click", (event) => {
-  if (event.target === modal) closeModal();
+  if (event.target === modal) {
+    closeModal();
+  }
 });
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && modal.classList.contains("open")) closeModal();
+  if (event.key === "Escape" && modal.classList.contains("open")) {
+    closeModal();
+  }
 });
 
 export { performSearch };

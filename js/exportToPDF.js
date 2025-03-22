@@ -1,6 +1,5 @@
 // exportToPDF.js - Handles exporting recipe details to PDF using the jsPDF library
-// Ensure the jsPDF library is included via CDN in your HTML:
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+// Ensure the jsPDF library is included via CDN in your HTML.
 
 const jsPDF = (typeof window !== "undefined" && window.jspdf) ? window.jspdf.jsPDF : null;
 if (!jsPDF) {
@@ -16,25 +15,18 @@ function exportToPDF(recipe) {
     console.error("jsPDF library is not loaded. Please include it to enable PDF export.");
     return;
   }
-
   const doc = new jsPDF();
   const title = recipe.title || recipe.name || "Recipe";
-
-  // Title
   doc.setFontSize(20);
   doc.text(title, 10, 20);
-
-  // Ingredients
   doc.setFontSize(14);
   doc.text("Ingredients:", 10, 30);
   doc.setFontSize(12);
   let yOffset = 40;
-
   const ingredients =
     recipe.extendedIngredients ||
     (recipe.sections && recipe.sections[0] && recipe.sections[0].components) ||
     [];
-
   if (ingredients.length === 0) {
     doc.text("No ingredients available.", 10, yOffset);
     yOffset += 10;
@@ -56,8 +48,6 @@ function exportToPDF(recipe) {
       }
     });
   }
-
-  // Instructions
   doc.setFontSize(14);
   doc.text("Instructions:", 10, yOffset + 10);
   doc.setFontSize(12);
@@ -65,8 +55,6 @@ function exportToPDF(recipe) {
   const instructions = recipe.instructions || recipe.description || "No instructions available.";
   const lines = doc.splitTextToSize(instructions, 180);
   doc.text(lines, 10, yOffset);
-
-  // Save the PDF
   doc.save(`${title}.pdf`);
 }
 
