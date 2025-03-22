@@ -199,6 +199,31 @@ body {
   color: #fff;
 }
 
+/* ARROW BUTTON STYLING */
+.arrow-button {
+  margin: 0 10px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: 1px solid #ff5722;
+  background-color: #fff;
+  color: #ff5722;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.arrow-button:hover,
+.arrow-button:focus {
+  background-color: #ff5722;
+  color: #fff;
+  outline: none;
+}
+
+.arrow-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* MODAL */
 .modal {
   display: none;

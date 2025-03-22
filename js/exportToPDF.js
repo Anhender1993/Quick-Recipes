@@ -1,4 +1,6 @@
 // exportToPDF.js - Handles exporting recipe details to PDF using the jsPDF library
+// Ensure the jsPDF library is included via CDN in your HTML:
+// <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 const jsPDF = (typeof window !== "undefined" && window.jspdf) ? window.jspdf.jsPDF : null;
 if (!jsPDF) {
@@ -48,8 +50,6 @@ function exportToPDF(recipe) {
       }
       doc.text(line, 10, yOffset);
       yOffset += 10;
-
-      // Add new page if near bottom
       if (yOffset > 280) {
         doc.addPage();
         yOffset = 20;

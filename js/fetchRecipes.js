@@ -5,14 +5,17 @@ const TASTY_API_KEY = "600e0d512fmsh965b7450fb4fdd8p1873e0jsn239c1a809df5"; // T
 
 /**
  * Fetch recipes from Spoonacular API
+ * @param {string} query - Search query
+ * @param {number} offset - Offset for pagination (default 0)
+ * @returns {Promise<Array>} - List of recipes with a source property
  */
-async function fetchSpoonacularRecipes(query) {
-  const url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=10&apiKey=${SPOONACULAR_API_KEY}`;
+async function fetchSpoonacularRecipes(query, offset = 0) {
+  const url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=10&offset=${offset}&apiKey=${SPOONACULAR_API_KEY}`;
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Spoonacular API Error: ${response.status}`);
     const data = await response.json();
-    return (data.results || []).map((recipe) => ({
+    return (data.results || []).map(recipe => ({
       ...recipe,
       source: "spoonacular",
       title: recipe.title,
@@ -26,21 +29,24 @@ async function fetchSpoonacularRecipes(query) {
 
 /**
  * Fetch recipes from Tasty API
+ * @param {string} query - Search query
+ * @param {number} offset - Offset for pagination (default 0)
+ * @returns {Promise<Array>} - List of recipes with a source property
  */
-async function fetchTastyRecipes(query) {
-  const url = `https://tasty.p.rapidapi.com/recipes/list?from=0&size=10&q=${query}`;
+async function fetchTastyRecipes(query, offset = 0) {
+  const url = `https://tasty.p.rapidapi.com/recipes/list?from=${offset}&size=10&q=${query}`;
   const options = {
     method: "GET",
     headers: {
       "X-RapidAPI-Key": TASTY_API_KEY,
-      "X-RapidAPI-Host": "tasty.p.rapidapi.com",
-    },
+      "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+    }
   };
   try {
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`Tasty API Error: ${response.status}`);
     const data = await response.json();
-    return (data.results || []).map((recipe) => ({
+    return (data.results || []).map(recipe => ({
       ...recipe,
       source: "tasty",
       image: recipe.image || recipe.thumbnail_url || "",
@@ -53,7 +59,24 @@ async function fetchTastyRecipes(query) {
 }
 
 /**
+ * Fetch recipes from both APIs
+ * @param {string} query - Search query
+ * @param {number} offset - Offset for pagination (default 0)
+ * @returns {Promise<Array>} - Combined list of recipes
+ */
+async function fetchAllRecipes(query, offset = 0) {
+  const [spoonacularRecipes, tastyRecipes] = await Promise.all([
+    fetchSpoonacularRecipes(query, offset),
+    fetchTastyRecipes(query, offset)
+  ]);
+  return [...spoonacularRecipes, ...tastyRecipes];
+}
+
+/**
  * Fetch detailed recipe information by ID
+ * @param {string} recipeId - The ID of the recipe
+ * @param {string} source - The source of the recipe ("spoonacular" or "tasty")
+ * @returns {Promise<Object>} - Recipe details
  */
 async function fetchRecipeDetails(recipeId, source) {
   let url;
@@ -62,16 +85,13 @@ async function fetchRecipeDetails(recipeId, source) {
   } else {
     url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
   }
-  const options =
-    source === "tasty"
-      ? {
-          method: "GET",
-          headers: {
-            "X-RapidAPI-Key": TASTY_API_KEY,
-            "X-RapidAPI-Host": "tasty.p.rapidapi.com",
-          },
-        }
-      : {};
+  const options = source === "tasty" ? {
+    method: "GET",
+    headers: {
+      "X-RapidAPI-Key": TASTY_API_KEY,
+      "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+    }
+  } : {};
   try {
     const response = await fetch(url, options);
     if (!response.ok) throw new Error(`Error fetching details from ${source}: ${response.status}`);
@@ -80,17 +100,6 @@ async function fetchRecipeDetails(recipeId, source) {
     console.error("Error fetching recipe details:", error);
     return null;
   }
-}
-
-/**
- * Fetch recipes from both APIs
- */
-async function fetchAllRecipes(query) {
-  const [spoonacularRecipes, tastyRecipes] = await Promise.all([
-    fetchSpoonacularRecipes(query),
-    fetchTastyRecipes(query),
-  ]);
-  return [...spoonacularRecipes, ...tastyRecipes];
 }
 
 export { fetchAllRecipes, fetchRecipeDetails };
