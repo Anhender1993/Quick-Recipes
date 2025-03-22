@@ -1,4 +1,4 @@
-// script.js - Handles search functionality, UI updates, and modal logic
+// script.js - Handles search functionality, UI updates, modal logic, and favorites
 
 import { fetchAllRecipes, fetchRecipeDetails } from "./FetchRecipes.js";
 import { exportToPDF } from "./exportToPDF.js";
@@ -18,13 +18,12 @@ let currentQuery = "";
 let currentOffset = 0; // For API pagination
 const maxPagesToLoad = 5; // Pre-load up to 5 pages (max 50 recipes)
 
-/** Opens the modal by adding the "open" class. */
+/** Modal Functions **/
 function openModal() {
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
 }
 
-/** Closes the modal by removing the "open" class. */
 function closeModal() {
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden", "true");
@@ -43,7 +42,6 @@ function renderRecipes(recipes) {
     return;
   }
 
-  // Calculate the slice of recipes for the current page.
   const start = (currentPage - 1) * resultsPerPage;
   const end = start + resultsPerPage;
   const paginatedRecipes = recipes.slice(start, end);
@@ -57,7 +55,6 @@ function renderRecipes(recipes) {
       <button class="more-info-btn">More information</button>
     `;
 
-    // Attach event listener to the "More information" button.
     const moreInfoBtn = recipeCard.querySelector(".more-info-btn");
     moreInfoBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -72,8 +69,7 @@ function renderRecipes(recipes) {
 
 /**
  * Load more recipes from the API and append them.
- * (This function is used for pre-loading only.)
- * @returns {Promise<Array>} - The newly loaded recipes.
+ * @returns {Promise<Array>} - Newly loaded recipes.
  */
 async function loadMoreRecipes() {
   currentOffset += resultsPerPage;
@@ -85,17 +81,14 @@ async function loadMoreRecipes() {
 }
 
 /**
- * Render pagination controls with arrow buttons and a Home button.
- * Displays numeric page buttons based on the preloaded recipes, up to a maximum of 5 pages.
+ * Render pagination controls.
  */
 function renderPagination() {
   paginationContainer.innerHTML = "";
   
-  // Compute total pages based on preloaded recipes.
   const computedTotalPages = Math.ceil(allRecipes.length / resultsPerPage);
   const totalPages = Math.min(computedTotalPages, maxPagesToLoad);
 
-  // Create and add the Home button.
   const homeButton = document.createElement("button");
   homeButton.innerText = "Home";
   homeButton.classList.add("home-button");
@@ -104,7 +97,6 @@ function renderPagination() {
   });
   paginationContainer.appendChild(homeButton);
 
-  // Previous arrow button.
   const prevButton = document.createElement("button");
   prevButton.innerHTML = "&#8592;";
   prevButton.classList.add("arrow-button");
@@ -117,7 +109,6 @@ function renderPagination() {
   });
   paginationContainer.appendChild(prevButton);
 
-  // Determine sliding window for numeric page buttons.
   let startPage = 1;
   let endPage = totalPages;
   if (totalPages > 5) {
@@ -128,8 +119,6 @@ function renderPagination() {
       startPage = endPage - 4;
     }
   }
-
-  // Numeric page buttons.
   for (let i = startPage; i <= endPage; i++) {
     const pageButton = document.createElement("button");
     pageButton.innerText = i;
@@ -142,17 +131,21 @@ function renderPagination() {
     paginationContainer.appendChild(pageButton);
   }
 
-  // Next arrow button.
   const nextButton = document.createElement("button");
   nextButton.innerHTML = "&#8594;";
   nextButton.classList.add("arrow-button");
   if (currentPage === totalPages) nextButton.disabled = true;
-  nextButton.addEventListener("click", () => {
+  nextButton.addEventListener("click", async () => {
+    if (currentPage * resultsPerPage >= allRecipes.length) {
+      const newRecipes = await loadMoreRecipes();
+      if (newRecipes.length === 0) {
+        alert("No more recipes available.");
+        return;
+      }
+    }
     if (currentPage < totalPages) {
       currentPage++;
       renderRecipes(allRecipes);
-    } else {
-      alert("No more recipes available.");
     }
   });
   paginationContainer.appendChild(nextButton);
@@ -199,8 +192,10 @@ async function showRecipeDetails(recipe) {
     </ul>
     <h3>Instructions:</h3>
     <p>${details.instructions || details.description || "No instructions available."}</p>
-    <button id="export-pdf">Export to PDF</button>
-    <button id="export-csv">Export to CSV</button>
+    <div class="modal-buttons">
+      <button id="export-pdf">Export to PDF</button>
+      <button id="export-csv">Export to CSV</button>
+    </div>
   `;
 
   document.getElementById("close-modal").addEventListener("click", closeModal);
@@ -216,13 +211,17 @@ async function showRecipeDetails(recipe) {
  */
 async function performSearch() {
   const query = searchInput.value.trim();
-  if (!query) return;
+  if (!query) {
+    // If no query, hide results.
+    resultsContainer.innerHTML = "";
+    paginationContainer.innerHTML = "";
+    return;
+  }
   currentQuery = query;
   currentOffset = 0;
   currentPage = 1;
   allRecipes = [];
   
-  // Pre-load recipes for up to maxPagesToLoad pages concurrently.
   const promises = [];
   for (let i = 0; i < maxPagesToLoad; i++) {
     const offset = i * resultsPerPage;

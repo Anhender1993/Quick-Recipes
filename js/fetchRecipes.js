@@ -1,105 +1,104 @@
-// FetchRecipes.js - Handles fetching recipes from APIs
-
-const SPOONACULAR_API_KEY = "736c4b6768174668815f3bdf3c366298"; // Spoonacular API Key
-const TASTY_API_KEY = "600e0d512fmsh965b7450fb4fdd8p1873e0jsn239c1a809df5"; // Tasty API Key
+// FetchRecipes.js - Handles fetching recipes using TheMealDB API
 
 /**
- * Fetch recipes from Spoonacular API
- * @param {string} query - Search query
- * @param {number} offset - Offset for pagination (default 0)
- * @returns {Promise<Array>} - List of recipes with a source property
+ * Helper function to extract ingredients from a meal object.
+ * TheMealDB returns up to 20 ingredients and measures (strIngredient1..20, strMeasure1..20).
+ * @param {Object} meal - The meal object from TheMealDB.
+ * @returns {Array} - An array of ingredient objects with an "original" property.
  */
-async function fetchSpoonacularRecipes(query, offset = 0) {
-  const url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=10&offset=${offset}&apiKey=${SPOONACULAR_API_KEY}`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Spoonacular API Error: ${response.status}`);
-    const data = await response.json();
-    return (data.results || []).map(recipe => ({
-      ...recipe,
-      source: "spoonacular",
-      title: recipe.title,
-      image: recipe.image,
-    }));
-  } catch (error) {
-    console.error("Error fetching Spoonacular recipes:", error);
-    return [];
-  }
-}
-
-/**
- * Fetch recipes from Tasty API
- * @param {string} query - Search query
- * @param {number} offset - Offset for pagination (default 0)
- * @returns {Promise<Array>} - List of recipes with a source property
- */
-async function fetchTastyRecipes(query, offset = 0) {
-  const url = `https://tasty.p.rapidapi.com/recipes/list?from=${offset}&size=10&q=${query}`;
-  const options = {
-    method: "GET",
-    headers: {
-      "X-RapidAPI-Key": TASTY_API_KEY,
-      "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+function getMealIngredients(meal) {
+    const ingredients = [];
+    for (let i = 1; i <= 20; i++) {
+      const ingredient = meal[`strIngredient${i}`];
+      const measure = meal[`strMeasure${i}`];
+      if (ingredient && ingredient.trim()) {
+        ingredients.push({
+          original: `${measure ? measure.trim() : ""} ${ingredient.trim()}`.trim()
+        });
+      }
     }
-  };
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`Tasty API Error: ${response.status}`);
-    const data = await response.json();
-    return (data.results || []).map(recipe => ({
-      ...recipe,
-      source: "tasty",
-      image: recipe.image || recipe.thumbnail_url || "",
-      title: recipe.title || recipe.name || "Untitled",
-    }));
-  } catch (error) {
-    console.error("Error fetching Tasty recipes:", error);
-    return [];
+    return ingredients;
   }
-}
-
-/**
- * Fetch recipes from both APIs
- * @param {string} query - Search query
- * @param {number} offset - Offset for pagination (default 0)
- * @returns {Promise<Array>} - Combined list of recipes
- */
-async function fetchAllRecipes(query, offset = 0) {
-  const [spoonacularRecipes, tastyRecipes] = await Promise.all([
-    fetchSpoonacularRecipes(query, offset),
-    fetchTastyRecipes(query, offset)
-  ]);
-  return [...spoonacularRecipes, ...tastyRecipes];
-}
-
-/**
- * Fetch detailed recipe information by ID
- * @param {string} recipeId - The ID of the recipe
- * @param {string} source - The source of the recipe ("spoonacular" or "tasty")
- * @returns {Promise<Object>} - Recipe details
- */
-async function fetchRecipeDetails(recipeId, source) {
-  let url;
-  if (source === "tasty") {
-    url = `https://tasty.p.rapidapi.com/recipes/get-more-info?id=${recipeId}`;
-  } else {
-    url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
-  }
-  const options = source === "tasty" ? {
-    method: "GET",
-    headers: {
-      "X-RapidAPI-Key": TASTY_API_KEY,
-      "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+  
+  /**
+   * Fetch recipes from TheMealDB API by name.
+   * @param {string} query - The search query.
+   * @returns {Promise<Array>} - An array of recipe objects.
+   */
+  async function fetchMealDBRecipes(query) {
+    const url = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query)}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log("TheMealDB raw data:", data);
+      if (!data.meals) {
+        return [];
+      }
+      // Map each meal into a standardized recipe object.
+      return data.meals.map(meal => ({
+        id: meal.idMeal,
+        title: meal.strMeal,
+        image: meal.strMealThumb,
+        instructions: meal.strInstructions,
+        source: "themealdb",
+        extendedIngredients: getMealIngredients(meal)
+      }));
+    } catch (error) {
+      console.error("Error fetching TheMealDB recipes:", error);
+      return [];
     }
-  } : {};
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`Error fetching details from ${source}: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching recipe details:", error);
+  }
+  
+  /**
+   * Fetch detailed recipe information from TheMealDB API using the lookup endpoint.
+   * @param {string} recipeId - The ID of the recipe.
+   * @returns {Promise<Object|null>} - The recipe details or null if not found.
+   */
+  async function fetchMealDBRecipeDetails(recipeId) {
+    const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${encodeURIComponent(recipeId)}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log("TheMealDB recipe details:", data);
+      if (!data.meals) {
+        return null;
+      }
+      const meal = data.meals[0];
+      return {
+        id: meal.idMeal,
+        title: meal.strMeal,
+        image: meal.strMealThumb,
+        instructions: meal.strInstructions,
+        source: "themealdb",
+        extendedIngredients: getMealIngredients(meal)
+      };
+    } catch (error) {
+      console.error("Error fetching TheMealDB recipe details:", error);
+      return null;
+    }
+  }
+  
+  /**
+   * Fetch recipes from TheMealDB API.
+   * @param {string} query - Search query.
+   * @param {number} offset - Ignored (TheMealDB doesn't support offset).
+   * @returns {Promise<Array>} - Array of recipe objects.
+   */
+  async function fetchAllRecipes(query, offset = 0) {
+    return await fetchMealDBRecipes(query);
+  }
+  
+  /**
+   * Fetch detailed recipe information.
+   * @param {string} recipeId - The ID of the recipe.
+   * @param {string} source - Should be "themealdb".
+   * @returns {Promise<Object|null>} - Recipe details.
+   */
+  async function fetchRecipeDetails(recipeId, source) {
+    if (source === "themealdb") {
+      return await fetchMealDBRecipeDetails(recipeId);
+    }
     return null;
   }
-}
-
-export { fetchAllRecipes, fetchRecipeDetails };
+  
+  export { fetchAllRecipes, fetchRecipeDetails };
